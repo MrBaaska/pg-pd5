@@ -1779,6 +1779,8 @@
       return;
     }
 
+    setEditMode(false);
+
     const historyKey = 'ubtz_session_logs';
     const activeSessionKey = 'ubtz_active_session_id';
     const activeSessionId = localStorage.getItem(activeSessionKey);

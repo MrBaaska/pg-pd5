@@ -446,6 +446,7 @@
             // Save session to LocalStorage history
             saveSessionToHistory(newSession);
             localStorage.setItem('ubtz_active_session_id', newSession.id);
+            sessionStorage.setItem('ubtz:index:edit-mode', 'edit');
 
             window.location.href = 'nvvr.html';
         }
