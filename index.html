@@ -166,33 +166,8 @@
                 <!-- Left Side: Logo & Emblem -->
                 <div class="md:col-span-5 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-white/10 pb-8 md:pb-0 md:pr-8">
                     <div class="relative group cursor-pointer">
-                        <div class="w-48 h-48 sm:w-60 sm:h-60 md:w-64 md:h-64 rounded-full border-4 border-blue-400/40 p-3 shadow-badge-glow transition-all duration-500 group-hover:scale-105 group-hover:border-blue-400 flex items-center justify-center">
-                            <div class="w-full h-full rounded-full border-2 border-dashed border-sky-300/60 flex items-center justify-center relative p-4 bg-blue-950/40">
-                                <!-- UBTZ Emblem SVG -->
-                                <svg viewBox="0 0 200 200" class="w-full h-full text-sky-200 fill-current drop-shadow-md">
-                                    <circle cx="100" cy="100" r="95" fill="none" stroke="currentColor" stroke-width="2" opacity="0.8"/>
-                                    <circle cx="100" cy="100" r="88" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                                    <path id="textPath" fill="none" d="M 25, 100 A 75,75 0 1,1 175,100 A 75,75 0 1,1 25,100" />
-                                    <text font-size="8.5" font-weight="bold" fill="white" letter-spacing="1">
-                                        <textPath href="#textPath" startOffset="50%" text-anchor="middle">
-                                            МОНГОЛ-ОРОСЫН ХУВЬ НИЙЛҮҮЛСЭН НИЙГЭМЛЭГ • УЛААНБААТАР ТӨМӨР ЗАМ
-                                        </textPath>
-                                    </text>
-                                    <g transform="translate(100, 105) scale(0.75)">
-                                        <polygon points="0,-75 6,-58 24,-58 10,-48 15,-30 0,-40 -15,-30 -10,-48 -24,-58 -6,-58" fill="#facc15"/>
-                                        <path d="M-35,-20 L35,30 M35,-20 L-35,30" stroke="white" stroke-width="6" stroke-linecap="round"/>
-                                        <rect x="-40" y="-25" width="12" height="10" rx="2" fill="white"/>
-                                        <rect x="28" y="-25" width="12" height="10" rx="2" fill="white"/>
-                                        <rect x="-30" y="-10" width="60" height="40" rx="5" fill="#1e3a8a" stroke="white" stroke-width="3"/>
-                                        <circle cx="0" cy="5" r="10" fill="#facc15" stroke="white" stroke-width="2"/>
-                                        <rect x="-22" y="-5" width="12" height="8" fill="white"/>
-                                        <rect x="10" y="-5" width="12" height="8" fill="white"/>
-                                        <path d="M-35,30 L35,30 L25,45 L-25,45 Z" fill="white"/>
-                                        <path d="M-30,0 Q-60,-15 -80,5 Q-50,10 -30,15 Z" fill="white"/>
-                                        <path d="M30,0 Q60,-15 80,5 Q50,10 30,15 Z" fill="white"/>
-                                    </g>
-                                </svg>
-                            </div>
+                        <div class="w-48 h-48 sm:w-60 sm:h-60 md:w-64 md:h-64 rounded-full border-4 border-blue-400/40 shadow-badge-glow transition-all duration-500 group-hover:scale-105 group-hover:border-blue-400 overflow-hidden">
+                            <img src="assets/ubtz-emblem.png" alt="Улаанбаатар төмөр замын медаль" class="w-full h-full rounded-full object-cover drop-shadow-md">
                         </div>
                     </div>
                 </div>
@@ -353,13 +328,13 @@
         // Authorized Employees Predefined Mapping by Code & Position
         const POSITIONS_DATA = {
             "ПД": {
-                code: "89669234",
+                code: "89073949",
                 title: "ПД (Замын мастер)",
                 name: "Б.Энхсайхан",
                 department: "ПЧ-2 ПД-5"
             },
             "ПДБк": {
-                code: "89669235",
+                code: "99836322",
                 title: "ПДБк (Шалгалтын бригадын дарга)",
                 name: "Т.Энхжаргал",
                 department: "ПЧ-2 ПДБк"
