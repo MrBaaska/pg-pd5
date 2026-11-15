@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Замын 2-р ангийн 5-р хэсэг</title>
+    <title>Замын 2-р анги</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -111,7 +111,7 @@
             
             <div class="space-y-2">
                 <h3 class="text-2xl font-extrabold text-white">Амжилттай нэвтэрлээ!</h3>
-                <p class="text-xs text-slate-300">Нэвтрэлтийн бүртгэл доод талын "Түүх" хэсэгт бүртгэгдлээ.</p>
+                <p class="text-xs text-slate-300">Системээс гарахад нэвтрэлтийн бүртгэл "Түүх" хэсэгт дууссан төлөвөөр харагдана.</p>
             </div>
 
             <!-- User Info Card inside Modal -->
@@ -175,38 +175,56 @@
                 <!-- Right Side: Form Inputs -->
                 <div class="md:col-span-7 flex flex-col justify-center space-y-6">
                     <div class="text-center md:text-left space-y-1">
-                        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white drop-shadow-sm">/ПЧ-2/ Замын 5-р хэсэг</h1>
+                        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white drop-shadow-sm">Замын 2-р анги</h1>
                         <p class="text-base sm:text-lg font-medium text-sky-200">Хэсгийн өдөр тутмын мэдээллийн архив</p>
                        
 
                     <!-- Form -->
                     <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
                         
-                        <!-- Position Select Dropdown -->
+                        <!-- Section selector must be first -->
                         <div class="space-y-1.5">
-                            <label for="positionSelect" class="block text-xs sm:text-sm font-medium text-slate-200">
-                                Албан тушаал сонгоно уу
+                            <label for="sectionSelect" class="block text-xs sm:text-sm font-medium text-slate-200">
+                                Хэсэг сонгоно уу
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-300">
-                                    <i class="fa-solid fa-user-gear text-sm"></i>
+                                    <i class="fa-solid fa-road text-sm"></i>
                                 </div>
-                                <select 
-                                    id="positionSelect" 
-                                    required 
+                                <select
+                                    id="sectionSelect"
+                                    onchange="handleSectionSelection()"
                                     class="glass-input w-full pl-10 pr-10 py-3 rounded-xl text-sm font-medium appearance-none focus:ring-0 cursor-pointer"
                                 >
-                                    <option value="" disabled selected>-- Албан тушаалаа сонгох --</option>
-                                    <option value="ПД">ПД (Б.Энхсайхан)</option>
-                                    <option value="ПДБк">ПДБк (Т.Энхжаргал)</option>
-                                    <option value="ПДБс">ПДБс (О.Батбаяр)</option>
-                                    <option value="ПДБр">ПДБр (Т.Жамъяндагва)</option>
-                                    <option value="ПД-г">ПД-г (ПД, ПДБ-н түр орлон)</option>
+                                    <option value="" selected>-- Хэсгээ сонгох --</option>
                                 </select>
                                 <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-300">
                                     <i class="fa-solid fa-chevron-down text-xs"></i>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Section-specific position and brigade selector -->
+                        <div id="brigadeSelectContainer" class="space-y-1.5 hidden">
+                            <label for="brigadeSelect" class="block text-xs sm:text-sm font-medium text-slate-200">
+                                Бригад сонгоно уу
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-300">
+                                    <i class="fa-solid fa-people-group text-sm"></i>
+                                </div>
+                                <select
+                                    id="brigadeSelect"
+                                    class="glass-input w-full pl-10 pr-10 py-3 rounded-xl text-sm font-medium appearance-none focus:ring-0 cursor-pointer"
+                                    disabled
+                                >
+                                    <option value="" selected>-- Эхлээд хэсгээ сонгоно уу --</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-300">
+                                    <i class="fa-solid fa-chevron-down text-xs"></i>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-amber-200/80">Албан тушаалаа сонгож нэвтэрнэ үү.</p>
                         </div>
 
                         <!-- Access Code Input -->
@@ -222,8 +240,8 @@
                                     type="password" 
                                     id="empCode" 
                                     required
-                                    placeholder="8 оронтой код" 
-                                    maxlength="8"
+                                    placeholder="8-9 оронтой код" 
+                                    maxlength="9"
                                     class="glass-input w-full pl-10 pr-10 py-3 rounded-xl text-sm font-medium tracking-wide placeholder-slate-400 focus:ring-0"
                                 >
                                 <button 
@@ -294,19 +312,52 @@
                     class="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-sky-400"
                 >
             </div>
+            <div class="flex flex-col sm:flex-row gap-3 w-full max-w-2xl">
+                <div class="flex-1 space-y-1">
+                    <label for="historySectionFilter" class="block text-xs text-slate-300">Хэсгээр шүүх</label>
+                    <select
+                        id="historySectionFilter"
+                        onchange="loadSessionHistory()"
+                        class="glass-input w-full px-3 py-2 rounded-xl text-xs"
+                    >
+                        <option value="">Бүх хэсэг</option>
+                    </select>
+                </div>
+                <div class="flex-1 space-y-1">
+                    <label for="historyMonthFilter" class="block text-xs text-slate-300">Сараар шүүх</label>
+                    <div class="flex gap-2">
+                        <select
+                            id="historyYearFilter"
+                            onchange="handleHistoryYearSelection()"
+                            aria-label="Он сонгох"
+                            class="glass-input w-1/2 px-3 py-2 rounded-xl text-xs"
+                        >
+                            <option value="">Бүх он</option>
+                        </select>
+                        <select
+                            id="historyMonthFilter"
+                            onchange="loadSessionHistory()"
+                            aria-label="Сар сонгох"
+                            disabled
+                            class="glass-input w-1/2 px-3 py-2 rounded-xl text-xs disabled:opacity-50"
+                        >
+                            <option value="">Бүх сар</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
 
             <!-- Table Container -->
-            <div class="overflow-x-auto">
+            <div class="max-h-[600px] overflow-auto rounded-xl">
                 <table class="w-full text-left text-xs">
-                    <thead>
-                        <tr class="text-slate-400 border-b border-white/10 uppercase tracking-wider font-semibold">
-                            <th class="pb-3 px-3">Сонгосон албан тушаал</th>
-                            <th class="pb-3 px-3">Ажилтны нэр</th>
-                            <th class="pb-3 px-3">Нэвтэрсэн хугацаа (Огноо)</th>
-                            <th class="pb-3 px-3">Гарсан хугацаа</th>
-                            <th class="pb-3 px-3">Системд байсан хугацаа</th>
-                            <th class="pb-3 px-3">Төлөв</th>
-                            <th class="pb-3 px-3 text-right">Үйлдэл</th>
+                    <thead class="sticky top-0 z-10 bg-sky-400">
+                        <tr class="text-black border-b border-sky-300 uppercase tracking-wider font-bold">
+                            <th class="pb-3 px-3 text-center">№</th>
+                            <th class="pb-3 px-3 text-center">Албан тушаал</th>
+                            <th class="pb-3 px-3 text-center">Ажилтны нэр</th>
+                            <th class="pb-3 px-3 text-center">Системд нэвтэрсэн</th>
+                            <th class="pb-3 px-3 text-center">Системээс гарсан</th>
+                            <th class="pb-3 px-3 text-center">Системд байсан хугацаа</th>
                         </tr>
                     </thead>
                     <tbody id="logsTableBody" class="divide-y divide-white/5">
@@ -323,49 +374,277 @@
         <p>© 2026 Улаанбаатар төмөр зам ХНН. "ЗАМЫН 2-Р АНГИ" Цаасан технологиос цахимд шилжих туршилтын ажил.</p>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <!-- JAVASCRIPT LOGIC -->
     <script>
-        // Authorized Employees Predefined Mapping by Code & Position
-        const POSITIONS_DATA = {
-            "ПД": {
-                code: "89073949",
-                title: "ПД (Замын мастер)",
-                name: "Б.Энхсайхан",
-                department: "ПЧ-2 ПД-5"
-            },
-            "ПДБк": {
-                code: "99836322",
-                title: "ПДБк (Шалгалтын бригадын дарга)",
-                name: "Т.Энхжаргал",
-                department: "ПЧ-2 ПДБк"
-            },
-            "ПДБс": {
-                code: "89669236",
-                title: "ПДБс (Зам сумын бригадын дарга)",
-                name: "О.Батбаяр",
-                department: "ПЧ-2 ПДБс"
-            },
-            "ПДБр": {
-                code: "89669237",
-                title: "ПДБр (Ажлын бригадын дарга)",
-                name: "Т.Жамъяндагва",
-                department: "ПЧ-2 ПДБр"
-            },
-            "ПД-г": {
-                code: "89669238",
-                title: "ПД-г (ПД, ПДБ-н түр орлон)",
-                name: "Анар",
-                department: "ПЧ-2 ПД-г"
-            }
+        const SUPABASE_CONFIG = window.SUPABASE_CONFIG || {};
+        let supabaseClient = null;
+        let sessionLogs = [];
+        const PROVIDED_SECTION_DATA = {
+            'road-1': [
+                { position: 'Замын мастер', employeeName: 'Л.Батсүх', code: '99037658' },
+                { position: 'Шалгалтын бригад', employeeName: 'М.Оюунбаяр', code: '94343300' },
+                { position: 'Ажлын бригад-1', employeeName: 'Л.Отгонбаатар', code: '99320390' },
+                { position: 'Ажлын бригад-2', employeeName: 'Б.Долгормаа', code: '99908647' },
+                { position: 'Ажлын бригад-3', employeeName: 'Н.Хишигдаваа', code: '95997047' },
+                { position: 'Ажлын бригад-4', employeeName: 'Ч.Денсэл', code: '86058632' }
+            ],
+            'road-2': [
+                { position: 'Замын мастер', employeeName: 'Б.Баярсайхан', code: '99034819' },
+                { position: 'Шалгалтын бригад', employeeName: 'М.Сөёл-Эрдэнэ', code: '99223832' },
+                { position: 'Ажлын бригад-1', employeeName: 'Б.Энхбиш', code: '95982864' },
+                { position: 'Ажлын бригад-2', employeeName: 'Б.Бум-Асрал', code: '89031453' },
+                { position: 'Ажлын бригад-3', employeeName: 'Ц.Цэндэржорж', code: '89029798' }
+            ],
+            'road-3': [
+                { position: 'Замын мастер', employeeName: 'М.Баянбаатар', code: '86114549' },
+                { position: 'Шалгалтын бригад', employeeName: 'Д.Пүрэвжав', code: '99049627' },
+                { position: 'Ажлын бригад-1', employeeName: 'Н.Наранцогт', code: '99054783' },
+                { position: 'Ажлын бригад-2', employeeName: 'Бат-Эрдэнэ', code: '88940503' }
+            ],
+            'road-4': [
+                { position: 'Замын мастер', employeeName: 'Э.Гантунг', code: '86114530' },
+                { position: 'Шалгалтын бригад', employeeName: 'С.Нандинцэцэг', code: '99605196' },
+                { position: 'Ажлын бригад-1', employeeName: 'Э.Туяа', code: '99662498' },
+                { position: 'Ажлын бригад-2', employeeName: 'С.Амагланбаатар', code: '89055020' },
+                { position: 'Ажлын бригад-3', employeeName: 'Н.Амагланбаатар', code: '99754609' }
+            ],
+            'road-5': [
+                { position: 'Замын мастер', employeeName: 'Б.Энхсайхан', code: '89073949' },
+                { position: 'Шалгалтын бригад', employeeName: 'Т.Энхжаргал', code: '998336322' },
+                { position: 'Ажлын бригад-1', employeeName: 'О.Батбаяр', code: '88161619' },
+                { position: 'Ажлын бригад-2', employeeName: 'Т.Жамъяндагва', code: '88146615' },
+                { position: 'Ажлын бригад-3', employeeName: 'Эрдэнэбаяр', code: '89999245' }
+            ],
+            'road-6': [
+                { position: 'Замын мастер', employeeName: 'Э.Баасанбат', code: '86112670' },
+                { position: 'Шалгалтын бригад', employeeName: 'А.Эрдэнэсувд', code: '88016393' },
+                { position: 'Ажлын бригад-1', employeeName: 'Ф.Мөнхбаяр', code: '99004621' },
+                { position: 'Ажлын бригад-2', employeeName: 'Я.Ганцогч', code: '95091800' }
+            ],
+            'road-7': [
+                { position: 'Замын мастер', employeeName: 'Н.Ууганбаяр', code: '99038120' },
+                { position: 'Шалгалтын бригад', employeeName: 'Л.Аззаяа', code: '99123228' },
+                { position: 'Ажлын бригад-1', employeeName: 'Н.Уламбаяр', code: '99700215' },
+                { position: 'Ажлын бригад-2', employeeName: 'Ц.Цэрэнганжид', code: '99065980' },
+                { position: 'Ажлын бригад-3', employeeName: 'Б.Ариунболд', code: '86117233' },
+                { position: 'Ажлын бригад-4', employeeName: 'Т.Төр-Амгалан', code: '99041654' }
+            ],
+            'road-8': [
+                { position: 'Замын мастер', employeeName: 'Н.Баатарсүх', code: '88058482' },
+                { position: 'Шалгалтын бригад', employeeName: 'Э.Тэнгис', code: '88072958' },
+                { position: 'Ажлын бригад-1', employeeName: 'Н.Энхбаяр', code: '99987075' },
+                { position: 'Ажлын бригад-2', employeeName: 'Ц.Даваахүү', code: '99058419' },
+                { position: 'Ажлын бригад-2', employeeName: 'Д.Чойжилсүрэн', code: '95654545' },
+                { position: 'Ажлын бригад-2', employeeName: 'Д.Борчулуун', code: '99061734' }
+            ],
+            'road-9': [
+                { position: 'Замын мастер', employeeName: 'Г.Хатанбаатар', code: '95990404' },
+                { position: 'Шалгалтын бригад', employeeName: 'А.Шижирээ', code: '89042627' },
+                { position: 'Ажлын бригад-1', employeeName: 'Н.Дамдинсүрэн', code: '94000925' },
+                { position: 'Ажлын бригад-2', employeeName: 'А.Хүчитбаатар', code: '99062413' },
+                { position: 'Ажлын бригад-3', employeeName: 'Г.Доржбаатар', code: '86002069' }
+            ],
+            'road-10': [
+                { position: 'Замын мастер', employeeName: 'Т.Буянтогтох', code: '99031191' },
+                { position: 'Шалгалтын бригад', employeeName: 'Ариунтуул', code: '80241166' },
+                { position: 'Ажлын бригад-1', employeeName: 'Д.Амгаланбаатар', code: '99034362' },
+                { position: 'Ажлын бригад-2', employeeName: 'Н.Ганбат', code: '99044730' },
+                { position: 'Ажлын бригад-3', employeeName: 'А.Отгонбаатар', code: '88030978' }
+            ],
+            'road-11': [
+                { position: 'Замын мастер', employeeName: 'Д.Батжаргал', code: '86114537' },
+                { position: 'Шалгалтын бригад', employeeName: 'Б.Ариунболд', code: '88726474' },
+                { position: 'Ажлын бригад-1', employeeName: 'Ж.Лхагвадорж', code: '89040963' },
+                { position: 'Ажлын бригад-2', employeeName: 'Ж.Лхагвабат', code: '88972353' },
+                { position: 'Ажлын бригад-3', employeeName: 'С.Дандарбаатар', code: '89007814' }
+            ],
+            'road-12': [
+                { position: 'Замын мастер', employeeName: 'М.Мягмарсүрэн', code: '89011552' },
+                { position: 'Шалгалтын бригад', employeeName: 'Баярцэцэг', code: '89669234' },
+                { position: 'Ажлын бригад-1', employeeName: 'А.Билэгсайхан', code: '91174659' },
+                { position: 'Ажлын бригад-2', employeeName: 'Д.Дарамзагд', code: '89669234' },
+                { position: 'Ажлын бригад-3', employeeName: 'С.Нэргүй', code: '89029808' }
+            ],
+            'road-13': [
+                { position: 'Замын мастер', employeeName: 'Б.Чингис', code: '88011036' },
+                { position: 'Шалгалтын бригад', employeeName: 'М.Энхбат', code: '99042231' },
+                { position: 'Ажлын бригад-1', employeeName: 'Л.Чулуунсүх', code: '99981894' },
+                { position: 'Ажлын бригад-2', employeeName: 'Бямбацогт', code: '94048871' }
+            ],
+            'road-14': [
+                { position: 'Замын мастер', employeeName: 'М.Энх-Амгалан', code: '86112670' },
+                { position: 'Шалгалтын бригад', employeeName: 'Л.Очирдулам', code: '89021815' },
+                { position: 'Ажлын бригад-1', employeeName: 'Б.Энхтөр', code: '99562728' },
+                { position: 'Ажлын бригад-2', employeeName: 'Ц.Энхтөр', code: '88051330' }
+            ],
+            'road-15': [
+                { position: 'Замын мастер', employeeName: 'Д.Ганбат', code: '99103901' },
+                { position: 'Шалгалтын бригад', employeeName: 'Ариунсанаа', code: '95091800' },
+                { position: 'Ажлын бригад-1', employeeName: 'Эрдэнэбат', code: '88044429' },
+                { position: 'Ажлын бригад-2', employeeName: 'Доржготов', code: '89021800' }
+            ],
+            'road-16': [
+                { position: 'Замын мастер', employeeName: 'Н.Отгонбаяр', code: '99058253' },
+                { position: 'Ажлын бригад-1', employeeName: 'Б.Батням', code: '99028733' },
+                { position: 'Ажлын бригад-2', employeeName: 'Б.Мөнх-Эрдэнэ', code: '86010508' }
+            ],
+            'road-17': [
+                { position: 'Замын мастер', employeeName: 'Ч.Цоггэрэл', code: '86111871' },
+                { position: 'Шалгалтын бригад', employeeName: 'Г.Болор-Оргил', code: '99516881' },
+                { position: 'Ажлын бригад-1', employeeName: 'Б.Нямхүү', code: '88250202' },
+                { position: 'Ажлын бригад-2', employeeName: 'М.Энхбаяр', code: '99622691' }
+            ],
+            'road-18': [
+                { position: 'Замын мастер', employeeName: 'Батсайхан', code: '88069509' },
+                { position: 'Ажлын бригад-1', employeeName: 'А.Пүрэвбазар', code: '80528497' },
+                { position: 'Ажлын бригад-2', employeeName: 'С.Ганбаяр', code: '86011919' }
+            ],
+            'road-19': [
+                { position: 'Замын мастер', employeeName: 'Х.Мэндсайхан', code: '86112384' },
+                { position: 'Шалгалтын бригад', employeeName: 'С.Энх-Амгалан', code: '89056819' },
+                { position: 'Ажлын бригад-1', employeeName: 'Д.Одгэрэл', code: '88056342' },
+                { position: 'Ажлын бригад-2', employeeName: 'Т.Цэнд', code: '88076814' }
+            ],
+            'road-20': [
+                { position: 'Замын мастер', employeeName: 'Ц.Ганбаатар', code: '89748093' },
+                { position: 'Ажлын бригад-1', employeeName: 'А.Төмөр-Очир', code: '89506959' },
+                { position: 'Ажлын бригад-2', employeeName: 'Б.Нандинцэцэг', code: '88071663' }
+            ],
+            'road-21': [
+                { position: 'Замын мастер', employeeName: 'Б.Хосбаяр', code: '86118028' },
+                { position: 'Шалгалтын бригад', employeeName: 'Д.Бямбабаатар', code: '99901480' },
+                { position: 'Ажлын бригад-1', employeeName: 'Л.Чулуунбаатар', code: '99031282' },
+                { position: 'Ажлын бригад-2', employeeName: 'М.Гантулга', code: '88630442' }
+            ]
         };
-
-        let timerInterval = null;
+        const SECTIONS_DATA = [
+            ...Array.from({ length: 21 }, (_, index) => {
+                const key = `road-${index + 1}`;
+                const providedRecords = PROVIDED_SECTION_DATA[key];
+                const sampleCount = (index % 4) + 1;
+                return {
+                    key,
+                    title: index < 6 ? `Замын ${index + 1}-р хэсэг` : `Замын ${index + 1} хэсэг`,
+                    brigadeCount: providedRecords
+                        ? providedRecords.filter(record => record.position.includes('бригад')).length
+                        : sampleCount,
+                    recordCount: providedRecords?.length ?? sampleCount,
+                    sampleCount
+                };
+            }),
+            { key: 'engineer', title: 'Инженер', brigadeCount: 2, recordCount: 2, sampleCount: 2 }
+        ];
+        const BRIGADES_DATA = Object.fromEntries(SECTIONS_DATA.map((section, sectionIndex) => [
+            section.key,
+            PROVIDED_SECTION_DATA[section.key]?.map((employee, brigadeIndex) => ({
+                key: `${section.key}-brigade-${brigadeIndex + 1}`,
+                code: employee.code,
+                title: employee.position,
+                name: employee.employeeName,
+                department: section.title
+            })) || Array.from({ length: section.recordCount }, (_, brigadeIndex) => {
+                const brigadeNumber = SECTIONS_DATA
+                    .slice(0, sectionIndex)
+                    .reduce((count, item) => count + item.sampleCount, 0) + brigadeIndex + 1;
+                const title = `${section.title} - ${brigadeIndex + 1}-р бригад`;
+                return {
+                    key: `${section.key}-brigade-${brigadeIndex + 1}`,
+                    code: String(70000000 + brigadeNumber),
+                    title,
+                    name: title,
+                    employeeName: title,
+                    department: section.title
+                };
+            })
+        ]));
 
         // On Load initialization
-        window.onload = function() {
-            renderLogsTable();
-            startGlobalTimerUpdate();
+        window.onload = async function() {
+            initializeSectionLogin();
+            initializeHistorySectionFilter();
+
+            if (
+                !SUPABASE_CONFIG.url ||
+                !SUPABASE_CONFIG.anonKey ||
+                SUPABASE_CONFIG.url.includes('YOUR_PROJECT_ID') ||
+                SUPABASE_CONFIG.anonKey.includes('YOUR_SUPABASE_ANON_KEY')
+            ) {
+                showToast('Supabase тохируулаагүй байна', 'supabase-config.js доторх project URL болон anon key-г оруулна уу.', 'error');
+                renderLogsTable();
+                return;
+            }
+
+            if (!window.supabase) {
+                showToast('Supabase сан ачаалсангүй', 'Интернэт холболт болон Supabase CDN хаягийг шалгана уу.', 'error');
+                renderLogsTable();
+                return;
+            }
+
+            supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+            await loadSessionHistory();
         };
+
+        function initializeSectionLogin() {
+            const sectionSelect = document.getElementById('sectionSelect');
+            SECTIONS_DATA.forEach(section => {
+                sectionSelect.add(new Option(
+                    section.title,
+                    section.key
+                ));
+            });
+        }
+
+        function initializeHistorySectionFilter() {
+            const filter = document.getElementById('historySectionFilter');
+            SECTIONS_DATA.forEach(section => {
+                filter.add(new Option(section.title, section.key));
+            });
+
+            const yearFilter = document.getElementById('historyYearFilter');
+            const monthFilter = document.getElementById('historyMonthFilter');
+            const currentYear = new Date().getFullYear();
+            for (let year = currentYear; year >= currentYear - 4; year--) {
+                yearFilter.add(new Option(`${year} он`, String(year)));
+            }
+            for (let month = 1; month <= 12; month++) {
+                monthFilter.add(new Option(`${month}-р сар`, String(month).padStart(2, '0')));
+            }
+        }
+
+        function handleHistoryYearSelection() {
+            const monthFilter = document.getElementById('historyMonthFilter');
+            monthFilter.value = '';
+            monthFilter.disabled = !document.getElementById('historyYearFilter').value;
+            loadSessionHistory();
+        }
+
+        function handleSectionSelection() {
+            updateBrigadeOptions();
+        }
+
+        function updateBrigadeOptions() {
+            const sectionKey = document.getElementById('sectionSelect').value;
+            const container = document.getElementById('brigadeSelectContainer');
+            const brigadeSelect = document.getElementById('brigadeSelect');
+            brigadeSelect.replaceChildren(new Option(
+                sectionKey ? '-- Бригад сонгох --' : '-- Эхлээд хэсгээ сонгоно уу --',
+                ''
+            ));
+
+            if (!sectionKey) {
+                container.classList.add('hidden');
+                brigadeSelect.disabled = true;
+                return;
+            }
+
+            BRIGADES_DATA[sectionKey].forEach(brigade => {
+                brigadeSelect.add(new Option(`${brigade.title} - ${brigade.name}`, brigade.key));
+            });
+            brigadeSelect.disabled = false;
+            container.classList.remove('hidden');
+        }
 
         // Toggle Password Code Visibility
         function toggleCodeVisibility() {
@@ -383,92 +662,151 @@
         }
 
         // Handle Login Submission
-        function handleLogin(e) {
+        async function handleLogin(e) {
             e.preventDefault();
-            const positionKey = document.getElementById('positionSelect').value;
-            const codeInput = document.getElementById('empCode').value.trim();
-
-            if (!positionKey) {
-                showToast('Анхааруулга', 'Албан тушаалаа сонгоно уу!', 'error');
+            if (!supabaseClient) {
+                showToast('Supabase тохируулаагүй байна', 'Эхлээд Supabase URL болон anon key-г тохируулна уу.', 'error');
                 return;
             }
 
-            const posInfo = POSITIONS_DATA[positionKey];
+            const sectionKey = document.getElementById('sectionSelect').value;
+            const brigadeKey = document.getElementById('brigadeSelect').value;
+            const codeInput = document.getElementById('empCode').value.trim();
 
-            // Validate code against selected position
-            if (posInfo.code !== codeInput) {
-                showToast('Код буруу байна', 'Сонгосон албан тушаалын нэвтрэх код тохирохгүй байна!', 'error');
+            if (!sectionKey) {
+                showToast('Анхааруулга', 'Эхлээд хэсгээ сонгоно уу!', 'error');
+                return;
+            }
+
+            const section = SECTIONS_DATA.find(item => item.key === sectionKey);
+            const brigade = BRIGADES_DATA[sectionKey]?.find(item => item.key === brigadeKey);
+
+            if (!section || !brigade) {
+                showToast('Анхааруулга', 'Нэвтрэх бригадаа сонгоно уу!', 'error');
+                return;
+            }
+
+            if (brigade.code !== codeInput) {
+                showToast('Код буруу байна', 'Сонгосон бригадын нэвтрэх код тохирохгүй байна!', 'error');
                 shakeElement(document.getElementById('loginForm'));
                 return;
             }
 
             const loginTimestamp = new Date();
 
-            // Create new log session entry
+            // Create a session record without storing the entered access code.
             const newSession = {
-                id: 'SESS-' + Date.now(),
-                positionKey: positionKey,
-                positionTitle: posInfo.title,
-                code: codeInput,
-                name: posInfo.name,
-                department: posInfo.department,
+                id: `SESS-${Date.now()}-${createSessionSuffix()}`,
+                sectionKey: section.key,
+                sectionTitle: section.title,
+                brigadeKey: brigade.key,
+                positionKey: `${sectionKey}:${brigadeKey}`,
+                positionTitle: `${section.title} / ${brigade.title}`,
+                name: brigade.name,
+                department: brigade.department,
                 loginTime: loginTimestamp.toISOString(),
                 loginFormatted: loginTimestamp.toLocaleString('mn-MN'),
                 status: 'Active',
                 durationSeconds: 0
             };
 
-            // Save session to LocalStorage history
-            saveSessionToHistory(newSession);
+            try {
+                await saveSessionToHistory(newSession);
+            } catch (error) {
+                console.error('Supabase session insert failed:', error);
+                showToast('Хадгалж чадсангүй', 'Supabase холболт болон хүснэгтийн тохиргоог шалгана уу.', 'error');
+                return;
+            }
+
             localStorage.setItem('ubtz_active_session_id', newSession.id);
             sessionStorage.setItem('ubtz:index:edit-mode', 'edit');
 
             window.location.href = 'nvvr.html';
         }
 
-        // Save to LocalStorage History
-        function saveSessionToHistory(session) {
-            let history = JSON.parse(localStorage.getItem('ubtz_session_logs') || '[]');
-            history.unshift(session);
-            localStorage.setItem('ubtz_session_logs', JSON.stringify(history));
-            renderLogsTable();
+        function mapDatabaseSession(row) {
+            const loginTimestamp = new Date(row.login_time);
+            const logoutTimestamp = row.logout_time ? new Date(row.logout_time) : null;
+            return {
+                id: row.id,
+                sectionKey: row.section_key,
+                sectionTitle: row.section_title,
+                brigadeKey: row.brigade_key,
+                positionKey: row.position_key,
+                positionTitle: row.position_title,
+                name: row.name,
+                department: row.department,
+                loginTime: row.login_time,
+                loginFormatted: loginTimestamp.toLocaleString('mn-MN'),
+                logoutTime: row.logout_time,
+                logoutFormatted: logoutTimestamp ? logoutTimestamp.toLocaleString('mn-MN') : '',
+                status: row.status,
+                durationSeconds: Math.max(0, Math.floor(((logoutTimestamp || new Date()).getTime() - loginTimestamp.getTime()) / 1000))
+            };
         }
 
-        // Timer interval to continuously update duration for active sessions
-        function startGlobalTimerUpdate() {
-            if (timerInterval) clearInterval(timerInterval);
+        function createSessionSuffix() {
+            return window.crypto && typeof window.crypto.randomUUID === 'function'
+                ? window.crypto.randomUUID()
+                : Math.random().toString(36).slice(2);
+        }
 
-            timerInterval = setInterval(() => {
-                let history = JSON.parse(localStorage.getItem('ubtz_session_logs') || '[]');
-                let updated = false;
-
-                const now = new Date().getTime();
-
-                history.forEach(item => {
-                    if (item.status === 'Active') {
-                        const startTime = new Date(item.loginTime).getTime();
-                        item.durationSeconds = Math.floor((now - startTime) / 1000);
-                        updated = true;
-                    }
+        async function saveSessionToHistory(session) {
+            const { error } = await supabaseClient
+                .from('section_session_logs')
+                .insert({
+                    id: session.id,
+                    section_key: session.sectionKey,
+                    section_title: session.sectionTitle,
+                    brigade_key: session.brigadeKey,
+                    position_key: session.positionKey,
+                    position_title: session.positionTitle,
+                    name: session.name,
+                    department: session.department,
+                    login_time: session.loginTime,
+                    status: session.status
                 });
 
-                if (updated) {
-                    localStorage.setItem('ubtz_session_logs', JSON.stringify(history));
-                    updateActiveDurationsInUI(history);
-                }
-            }, 1000);
+            if (error) throw error;
+
+            await loadSessionHistory();
         }
 
-        // Fast update only the duration text cells
-        function updateActiveDurationsInUI(history) {
-            history.forEach(item => {
-                if (item.status === 'Active') {
-                    const durationCell = document.getElementById(`duration-${item.id}`);
-                    if (durationCell) {
-                        durationCell.innerText = formatDuration(item.durationSeconds);
-                    }
-                }
-            });
+        async function loadSessionHistory() {
+            if (!supabaseClient) return;
+
+            let query = supabaseClient
+                .from('section_session_logs')
+                .select('*')
+                .eq('status', 'Completed')
+                .order('login_time', { ascending: false });
+            const sectionKey = document.getElementById('historySectionFilter').value;
+            const selectedYear = document.getElementById('historyYearFilter').value;
+            const selectedMonth = document.getElementById('historyMonthFilter').value;
+            if (sectionKey) query = query.eq('section_key', sectionKey);
+            if (selectedYear) {
+                const year = Number(selectedYear);
+                const month = selectedMonth ? Number(selectedMonth) - 1 : 0;
+                const monthStart = new Date(year, month, 1);
+                const nextMonthStart = selectedMonth
+                    ? new Date(year, month + 1, 1)
+                    : new Date(year + 1, 0, 1);
+                query = query
+                    .gte('login_time', monthStart.toISOString())
+                    .lt('login_time', nextMonthStart.toISOString());
+            }
+
+            const { data, error } = await query;
+            if (error) {
+                console.error('Supabase session query failed:', error);
+                sessionLogs = [];
+                renderLogsTable();
+                showToast('Мэдээлэл уншиж чадсангүй', 'Supabase хүснэгт болон эрхийн тохиргоог шалгана уу.', 'error');
+                return;
+            }
+
+            sessionLogs = data.map(mapDatabaseSession);
+            renderLogsTable();
         }
 
         // Format seconds to human readable (мин, сек / цаг)
@@ -484,31 +822,12 @@
             return `${mins} мин ${remainingSecs} сек`;
         }
 
-        // Finish/End a session manually from table
-        function endSession(sessionId) {
-            let history = JSON.parse(localStorage.getItem('ubtz_session_logs') || '[]');
-            const idx = history.findIndex(item => item.id === sessionId);
-            if (idx !== -1 && history[idx].status === 'Active') {
-                const logoutTime = new Date();
-                history[idx].status = 'Completed';
-                history[idx].logoutTime = logoutTime.toISOString();
-                history[idx].logoutFormatted = logoutTime.toLocaleString('mn-MN');
-                history[idx].durationSeconds = Math.floor((logoutTime.getTime() - new Date(history[idx].loginTime).getTime()) / 1000);
-                localStorage.setItem('ubtz_session_logs', JSON.stringify(history));
-                if (localStorage.getItem('ubtz_active_session_id') === sessionId) {
-                    localStorage.removeItem('ubtz_active_session_id');
-                }
-                renderLogsTable();
-                showToast('Дуусгавар боллоо', 'Системд байсан хугацаа зогслоо.', 'info');
-            }
-        }
-
         // Render Logs Table
         function renderLogsTable() {
             const tbody = document.getElementById('logsTableBody');
             if (!tbody) return;
 
-            let history = JSON.parse(localStorage.getItem('ubtz_session_logs') || '[]');
+            let history = sessionLogs;
             const searchQuery = (document.getElementById('searchLogsInput')?.value || '').toLowerCase();
 
             // Total count update
@@ -527,7 +846,7 @@
             if (history.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="py-8 text-center text-slate-400 font-medium">
+                        <td colspan="6" class="py-8 text-center text-slate-400 font-medium">
                             <i class="fa-solid fa-folder-open text-2xl mb-2 block opacity-50"></i>
                             Нэвтрэлтийн түүх одоогоор байхгүй байна
                         </td>
@@ -536,47 +855,29 @@
                 return;
             }
 
-            tbody.innerHTML = history.map(item => {
-                const isActive = item.status === 'Active';
-
-                const statusBadge = isActive
-                    ? `<span class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                         <span>Идэвхитэй байна</span>
-                       </span>`
-                    : `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold bg-slate-700/60 text-slate-300 border border-slate-600/40">
-                         Дууссан
-                       </span>`;
-
-                const actionBtn = isActive
-                    ? `<button onclick="endSession('${item.id}')" class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[10px] transition-all">
-                         Дуусгах
-                       </button>`
-                    : `<span class="text-slate-500 text-[10px]">-</span>`;
+            tbody.innerHTML = history.map((item, index) => {
+                const positionTitle = item.positionTitle.startsWith(`${item.sectionTitle} / `)
+                    ? item.positionTitle.slice(item.sectionTitle.length + 3)
+                    : item.positionTitle;
 
                 return `
-                    <tr class="hover:bg-white/5 transition-colors ${isActive ? 'bg-blue-500/10' : ''}">
+                    <tr class="hover:bg-white/5 transition-colors">
+                        <td class="py-3 px-3 text-slate-400 font-mono">${index + 1}</td>
                         <td class="py-3 px-3 font-bold text-white">
-                            <div class="text-sky-300 font-semibold">${item.positionTitle}</div>
+                            <div class="text-sky-300 font-semibold">${escapeHtml(item.sectionTitle)}</div>
+                            <div class="text-[10px] text-slate-400 font-medium">${escapeHtml(positionTitle)}</div>
                         </td>
                         <td class="py-3 px-3">
-                            <div class="font-semibold text-white">${item.name}</div>
-                            <div class="text-[10px] text-slate-400">${item.department}</div>
+                            <div class="font-semibold text-white">${escapeHtml(item.name)}</div>
                         </td>
                         <td class="py-3 px-3 text-slate-300 font-mono text-[11px]">
-                            ${item.loginFormatted}
+                            ${escapeHtml(item.loginFormatted)}
                         </td>
                         <td class="py-3 px-3 text-slate-300 font-mono text-[11px]">
-                            ${item.logoutFormatted || '-'}
+                            ${escapeHtml(item.logoutFormatted || '-')}
                         </td>
-                        <td id="duration-${item.id}" class="py-3 px-3 font-mono font-medium text-amber-300">
+                        <td id="duration-${escapeHtml(item.id)}" class="py-3 px-3 font-mono font-medium text-amber-300">
                             ${formatDuration(item.durationSeconds)}
-                        </td>
-                        <td class="py-3 px-3">
-                            ${statusBadge}
-                        </td>
-                        <td class="py-3 px-3 text-right">
-                            ${actionBtn}
                         </td>
                     </tr>
                 `;
@@ -584,13 +885,43 @@
         }
 
         // Clear Logs History
-        function clearLogs() {
+        async function clearLogs() {
+            if (!supabaseClient) {
+                showToast('Supabase тохируулаагүй байна', 'Эхлээд Supabase тохиргоог оруулна уу.', 'error');
+                return;
+            }
+
             if (confirm('Нэвтрэлтийн бүх түүхийг цэвэрлэх үү?')) {
-                localStorage.removeItem('ubtz_session_logs');
-                localStorage.removeItem('ubtz_active_session_id');
-                renderLogsTable();
+                let query = supabaseClient.from('section_session_logs').delete();
+                const sectionKey = document.getElementById('historySectionFilter').value;
+                if (sectionKey) query = query.eq('section_key', sectionKey);
+                else query = query.not('id', 'is', null);
+
+                const { error } = await query;
+                if (error) {
+                    console.error('Supabase session delete failed:', error);
+                    showToast('Устгаж чадсангүй', 'Supabase хүснэгтийн эрхийг шалгана уу.', 'error');
+                    return;
+                }
+
+                const activeSessionId = localStorage.getItem('ubtz_active_session_id');
+                if (!sectionKey || sessionLogs.some(item => item.id === activeSessionId)) {
+                    localStorage.removeItem('ubtz_active_session_id');
+                }
+                sessionLogs = [];
+                await loadSessionHistory();
                 showToast('Цэвэрлэгдлээ', 'Нэвтрэлтийн түүх амжилттай цэвэрлэгдлээ.', 'info');
             }
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[character]);
         }
 
         // Modal Controls

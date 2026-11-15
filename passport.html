@@ -529,6 +529,158 @@ let markedData = {};  // { km: [bool, bool, ...] }
 let kmOrder = [];
 let sequenceSelections = {}; // { "{km}-{stage}": [ { points: [], display: '', total: 0, runs: '' } ] }
 let replaceSelections = {}; // { runKey: [point1, point2, ...] }
+const PASSPORT_STORAGE_KEY = 'pu5_passport_inspection_v1';
+let formDraft = {};
+let storageWarningShown = false;
+
+function savePassportState() {
+    try {
+        localStorage.setItem(PASSPORT_STORAGE_KEY, JSON.stringify({
+            totalData,
+            markedData,
+            kmOrder,
+            sequenceSelections,
+            replaceSelections,
+            statMarked: document.getElementById('statMarked').value,
+            formDraft: {
+                km: document.getElementById('kmInput').value,
+                units: document.getElementById('unitInput').value,
+                rangeKm: document.getElementById('rangeKmSelect').value,
+                rangeStage: document.getElementById('rangeStageSelect').value,
+                rangePoints: document.getElementById('rangePointsInput').value
+            }
+        }));
+        storageWarningShown = false;
+        return true;
+    } catch (error) {
+        console.error('Паспортын мэдээлэл хадгалах үед алдаа гарлаа:', error);
+        if (!storageWarningShown) {
+            alert('Мэдээллийг хадгалах боломжгүй байна. Хөтчийн хадгалах сангийн тохиргоог шалгана уу.');
+            storageWarningShown = true;
+        }
+        return false;
+    }
+}
+
+function restorePassportState() {
+    let rawState;
+    try {
+        rawState = localStorage.getItem(PASSPORT_STORAGE_KEY);
+    } catch (error) {
+        console.error('Паспортын хадгалсан мэдээлэл унших үед алдаа гарлаа:', error);
+        alert('Хадгалсан мэдээллийг унших боломжгүй байна. Хөтчийн хадгалах сангийн тохиргоог шалгана уу.');
+        return;
+    }
+    if (!rawState) return;
+
+    try {
+        const savedState = JSON.parse(rawState);
+        if (!savedState || typeof savedState !== 'object' || Array.isArray(savedState)) {
+            throw new Error('Хадгалсан мэдээллийн бүтэц буруу байна.');
+        }
+
+        const savedTotalData = savedState.totalData && typeof savedState.totalData === 'object'
+            ? savedState.totalData
+            : {};
+        const savedMarkedData = savedState.markedData && typeof savedState.markedData === 'object'
+            ? savedState.markedData
+            : {};
+
+        totalData = {};
+        markedData = {};
+        kmOrder = [];
+        Object.entries(savedTotalData).forEach(([km, values]) => {
+            if (!Array.isArray(values)) return;
+            totalData[km] = values.map(value => {
+                const parsed = parseInt(value, 10);
+                return Number.isFinite(parsed) ? parsed : 0;
+            });
+            const savedMarks = savedMarkedData[km];
+            markedData[km] = totalData[km].map((_, index) =>
+                Array.isArray(savedMarks) && savedMarks[index] === true
+            );
+            kmOrder.push(km);
+        });
+        kmOrder.sort(compareKmValues);
+
+        sequenceSelections = {};
+        const savedSequences = savedState.sequenceSelections && typeof savedState.sequenceSelections === 'object'
+            ? savedState.sequenceSelections
+            : {};
+        Object.entries(savedSequences).forEach(([key, rawEntries]) => {
+            const entries = Array.isArray(rawEntries) ? rawEntries : [rawEntries];
+            const validEntries = entries.filter(entry => entry && Array.isArray(entry.points))
+                .map(entry => {
+                    const points = Array.from(new Set(entry.points.filter(Number.isInteger))).sort((a, b) => a - b);
+                    return {
+                        points,
+                        display: points.join(', '),
+                        runs: describePointRuns(points),
+                        total: points.length
+                    };
+                })
+                .filter(entry => entry.points.length > 0);
+            if (validEntries.length) sequenceSelections[key] = validEntries;
+        });
+
+        replaceSelections = {};
+        const savedReplacements = savedState.replaceSelections && typeof savedState.replaceSelections === 'object'
+            ? savedState.replaceSelections
+            : {};
+        Object.entries(savedReplacements).forEach(([key, points]) => {
+            if (Array.isArray(points)) {
+                const validPoints = Array.from(new Set(points.filter(Number.isInteger))).sort((a, b) => a - b);
+                if (validPoints.length) replaceSelections[key] = validPoints;
+            }
+        });
+
+        const savedStat = parseInt(savedState.statMarked, 10);
+        document.getElementById('statMarked').value = Number.isFinite(savedStat) ? savedStat : 0;
+        formDraft = savedState.formDraft && typeof savedState.formDraft === 'object'
+            ? savedState.formDraft
+            : {};
+        kmOrder.forEach(renderKilometerBlock);
+    } catch (error) {
+        console.error('Паспортын хадгалсан мэдээллийг сэргээх үед алдаа гарлаа:', error);
+        alert('Хадгалсан мэдээллийг сэргээж чадсангүй. Хадгалсан өгөгдөл гэмтсэн байж болзошгүй.');
+    }
+}
+
+function renderKilometerBlock(km) {
+    const values = totalData[km];
+    if (!Array.isArray(values)) return;
+
+    const container = document.getElementById('kilometersContainer');
+    const empty = container.querySelector('.empty-state');
+    if (empty) empty.remove();
+
+    const kmDiv = document.createElement('div');
+    kmDiv.className = 'km-block';
+    kmDiv.id = `km-block-${km}`;
+    kmDiv.innerHTML = `
+        <div class="km-header">
+            <span class="km-title">📍 ${km}-р КИЛОМЕТР &nbsp;<span style="color:var(--muted);font-size:0.75rem;font-family:IBM Plex Mono">(${values.length} үе)</span></span>
+            <span class="km-total-badge">Нийт: <b id="total-km-${km}">0</b> ш</span>
+        </div>
+        <div class="unit-grid" id="grid-${km}"></div>
+    `;
+    container.appendChild(kmDiv);
+
+    const grid = kmDiv.querySelector('.unit-grid');
+    values.forEach((value, index) => {
+        const unitDiv = document.createElement('div');
+        unitDiv.className = 'unit-item';
+        unitDiv.innerHTML = `
+            <label>${index + 1}-р үе</label>
+            <input type="number" id="unit-${km}-${index}" value="${value}" oninput="updateCount('${km}', ${index}, this.value)">
+        `;
+        grid.appendChild(unitDiv);
+        unitDiv.querySelector('input').classList.toggle('marked', markedData[km][index]);
+    });
+
+    const total = values.reduce((sum, value) => sum + value, 0);
+    document.getElementById(`total-km-${km}`).innerText = total.toLocaleString();
+}
 
 function compareKmValues(a, b) {
     const numA = Number(a);
@@ -564,34 +716,7 @@ function addKilometer() {
     totalData[km] = new Array(units).fill(0);
     markedData[km] = new Array(units).fill(false);
     kmOrder.push(km);
-
-    const container = document.getElementById('kilometersContainer');
-    // Remove empty state
-    const empty = container.querySelector('.empty-state');
-    if (empty) empty.remove();
-
-    const kmDiv = document.createElement('div');
-    kmDiv.className = 'km-block';
-    kmDiv.id = `km-block-${km}`;
-    kmDiv.innerHTML = `
-        <div class="km-header">
-            <span class="km-title">📍 ${km}-р КИЛОМЕТР &nbsp;<span style="color:var(--muted);font-size:0.75rem;font-family:IBM Plex Mono">(${units} үе)</span></span>
-            <span class="km-total-badge">Нийт: <b id="total-km-${km}">0</b> ш</span>
-        </div>
-        <div class="unit-grid" id="grid-${km}"></div>
-    `;
-    container.appendChild(kmDiv);
-
-    const grid = document.getElementById(`grid-${km}`);
-    for (let i = 1; i <= units; i++) {
-        const unitDiv = document.createElement('div');
-        unitDiv.className = 'unit-item';
-        unitDiv.innerHTML = `
-            <label>${i}-р үе</label>
-            <input type="number" id="unit-${km}-${i-1}" value="0" oninput="updateCount('${km}', ${i-1}, this.value)">
-        `;
-        grid.appendChild(unitDiv);
-    }
+    renderKilometerBlock(km);
 
     document.getElementById('kmInput').value = '';
     document.getElementById('unitInput').value = '';
@@ -599,6 +724,8 @@ function addKilometer() {
     updateStats();
     renderSearch();
     refreshConsecutiveSelectors();
+    renderConsecTable();
+    savePassportState();
 }
 
 function updateCount(km, idx, value) {
@@ -606,6 +733,7 @@ function updateCount(km, idx, value) {
     const kmSum = totalData[km].reduce((a,b) => a+b, 0);
     document.getElementById(`total-km-${km}`).innerText = kmSum.toLocaleString();
     updateStats();
+    savePassportState();
 }
 
 function setMark(km, idx, state) {
@@ -623,6 +751,7 @@ function setMark(km, idx, state) {
     updateStats();
     renderSearch();
     renderConsecTable();
+    savePassportState();
 }
 
 function toggleMark(km, idx) {
@@ -825,6 +954,7 @@ function removeConsecutiveRow(km, stage, entryNo, start, end) {
     renderConsecTable();
     renderSearch();
     updateStats();
+    savePassportState();
 }
 
 function pruneInvalidReplaceSelections(groups) {
@@ -863,6 +993,7 @@ function selectConsecutivePoint(km, stage, entryNo, start, end, point) {
     }
     renderConsecTable();
     updateStats();
+    savePassportState();
 }
 
 function renderSearch() {
@@ -988,6 +1119,7 @@ function markConsecutiveRange() {
     setMark(km, stage - 1, true);
     document.getElementById('rangePointsInput').value = '';
     document.getElementById('sequenceFeedback').innerText = `${km} КМ ${stage}-р үе: ${display}${runs ? ` (${runs})` : ''} • Нийт ${sequenceSelections[key].length} удаа бүртгэв`;
+    savePassportState();
 }
 
 function describeInputPoints(rawPoints) {
@@ -1047,10 +1179,35 @@ function buildPointRuns(points) {
 }
 
 // Init
+restorePassportState();
 reorderKmBlocks();
 updateStats();
 renderSearch();
 refreshConsecutiveSelectors();
+renderConsecTable();
+
+const kmInput = document.getElementById('kmInput');
+const unitInput = document.getElementById('unitInput');
+const rangeKmSelect = document.getElementById('rangeKmSelect');
+const rangeStageSelect = document.getElementById('rangeStageSelect');
+const rangePointsInput = document.getElementById('rangePointsInput');
+const statMarkedInput = document.getElementById('statMarked');
+
+kmInput.value = typeof formDraft.km === 'string' ? formDraft.km : '';
+unitInput.value = typeof formDraft.units === 'string' ? formDraft.units : '';
+rangeKmSelect.value = kmOrder.includes(String(formDraft.rangeKm || '')) ? String(formDraft.rangeKm) : '';
+refreshStageOptions();
+if (Array.from(rangeStageSelect.options).some(option => option.value === String(formDraft.rangeStage || ''))) {
+    rangeStageSelect.value = String(formDraft.rangeStage);
+}
+rangePointsInput.value = typeof formDraft.rangePoints === 'string' ? formDraft.rangePoints : '';
+updateSequenceFeedback();
+
+[kmInput, unitInput, rangePointsInput, statMarkedInput].forEach(input => {
+    input.addEventListener('input', savePassportState);
+});
+rangeKmSelect.addEventListener('change', savePassportState);
+rangeStageSelect.addEventListener('change', savePassportState);
 </script>
 
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Замын 5-р хэсэг — Удирдлагын систем</title>
+  <title>Замын 2-р анги</title>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
@@ -735,6 +735,12 @@
 
     /* Alert highlight */
     .sidebar-link.active-alert {
+      color: #7a9bbf;
+      background: transparent;
+      border-color: transparent;
+      animation: none;
+    }
+    .sidebar-link.active-alert:hover {
       color: var(--danger) !important;
       background: rgba(255,61,61,0.1) !important;
       border-color: rgba(255,61,61,0.35) !important;
@@ -1141,7 +1147,7 @@
           <div class="frame-dot" style="background:#27c93f"></div>
           <span id="frame-title-label" style="margin-left:8px; font-family:'Share Tech Mono',monospace; font-size:11px;">ХЭСГИЙН ТАНИЛЦУУЛГА</span>
         </div>
-        <iframe id="content-frame" src="./heseg.html" frameborder="0" style="width:100%;" allow="camera *; microphone *; autoplay *; clipboard-write *; encrypted-media *; gyroscope *; picture-in-picture *; fullscreen *"></iframe>
+        <iframe id="content-frame" src="about:blank" frameborder="0" style="width:100%;" allow="camera *; microphone *; autoplay *; clipboard-write *; encrypted-media *; gyroscope *; picture-in-picture *; fullscreen *"></iframe>
         <button class="video-close" id="video-close" type="button" aria-label="Бичлэгээс гарах" title="Бичлэгээс гарах"><i class="fa fa-xmark"></i></button>
       </div>
     </div>
@@ -1151,16 +1157,24 @@
 
 <div class="copyright-badge">© <span>B.Baasanjargal</span> | Зохиогчийн эрхээр хуулиар хамгаалагдсан</div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
 <script>
   let pageMap = {};
   const UI_STORAGE_KEYS = {
     lastPage: 'ubtz:index:last-page',
     editMode: 'ubtz:index:edit-mode'
   };
-  const FRAME_STORAGE_PREFIX = 'ubtz:autosave:';
   const EDIT_UNLOCK_CODE = '99836322';
   const VIDEO_PAGE_KEY = 'Зааварчилгаа / Тор засагч';
   const VIDEO_PAGE_SRC = 'https://www.youtube.com/embed/tjzEKLEMjsM?autoplay=1&rel=0';
+  const SECTION_STORAGE_SESSION_KEY = 'ubtz:active-section-key';
+  const SECTION_STORAGE_FRAME_PATH = '__localStorage__';
+  const SECTION_STORAGE_PREFIX = 'ubtz:section:';
+  let autosaveSupabaseClient = null;
+  let activeSectionKey = null;
+  let autosaveErrorNotified = false;
+  let sectionStorageWriteQueue = Promise.resolve();
   let previousPageKey = 'Хэсгийн танилцуулга';
   const FULLSCREEN_PAGE_KEYS = new Set([
     'Ажлын бүртгэл',
@@ -1357,8 +1371,8 @@
     }
   }
 
-  function getAutosaveStorageKey(frame) {
-    return FRAME_STORAGE_PREFIX + normalizeFramePath(frame.getAttribute('src') || frame.src);
+  function getAutosaveFramePath(frame) {
+    return 'section-v2:' + normalizeFramePath(frame.getAttribute('src') || frame.src);
   }
 
   function getElementDomPath(element) {
@@ -1452,29 +1466,107 @@
     });
   }
 
-  function loadAutosavePayload(storageKey) {
-    try {
-      return JSON.parse(localStorage.getItem(storageKey) || '{}');
-    } catch (error) {
-      return {};
+  async function loadAutosavePayload(framePath) {
+    const { data, error } = await autosaveSupabaseClient
+      .from('section_autosave_entries')
+      .select('state_key, state')
+      .eq('section_key', activeSectionKey)
+      .eq('frame_path', framePath);
+    if (error) {
+      throw error;
+    }
+    return Object.fromEntries(data.map(function(entry) {
+      return [entry.state_key, entry.state];
+    }));
+  }
+
+  function notifyAutosaveError(message, error) {
+    console.error(message, error);
+    if (!autosaveErrorNotified) {
+      autosaveErrorNotified = true;
+      const errorCode = error && error.code;
+      const hint = errorCode === 'PGRST205' || errorCode === '42P01'
+        ? '\n\nХэсэгчилсэн хадгалалтын хүснэгт олдсонгүй. Supabase migration-ийг ажиллуулна уу.'
+        : errorCode === '42501'
+          ? '\n\nSupabase хүснэгтийн GRANT болон Row Level Security policy тохиргоог шалгана уу.'
+          : '';
+      const detail = !hint && error && typeof error.message === 'string'
+        ? `\n\nТехникийн мэдээлэл: ${error.message}`
+        : '';
+      window.alert(message + hint + detail);
     }
   }
 
-  function saveAutosavePayload(storageKey, payload) {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(payload));
-    } catch (error) {
-      console.warn('Autosave data write failed:', error);
-    }
-  }
-
-  function setupFrameAutosave(doc, storageKey) {
-    if (doc.documentElement.dataset.autosaveReady === 'true') {
+  async function setupFrameAutosave(doc, framePath) {
+    if (doc.documentElement.dataset.autosaveReady === 'true' ||
+        doc.documentElement.dataset.autosaveLoading === 'true') {
       return;
     }
-    doc.documentElement.dataset.autosaveReady = 'true';
 
-    const payload = loadAutosavePayload(storageKey);
+    if (!autosaveSupabaseClient || !activeSectionKey) {
+      throw new Error('Идэвхтэй нэвтрэлтийн хэсэг тодорхойгүй байна.');
+    }
+
+    doc.documentElement.dataset.autosaveLoading = 'true';
+    let payload;
+    try {
+      payload = await loadAutosavePayload(framePath);
+    } catch (error) {
+      delete doc.documentElement.dataset.autosaveLoading;
+      throw error;
+    }
+    delete doc.documentElement.dataset.autosaveLoading;
+    doc.documentElement.dataset.autosaveReady = 'true';
+    const pendingStates = new Map();
+    let saveTimer = null;
+    let saveQueue = Promise.resolve();
+    let retryCount = 0;
+
+    function flushAutosave() {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      if (pendingStates.size === 0) {
+        return;
+      }
+
+      const entries = Array.from(pendingStates, function([stateKey, state]) {
+        return {
+          section_key: activeSectionKey,
+          frame_path: framePath,
+          state_key: stateKey,
+          state: state,
+          updated_at: new Date().toISOString()
+        };
+      });
+      pendingStates.clear();
+
+      saveQueue = saveQueue.then(async function() {
+        const { error } = await autosaveSupabaseClient
+          .from('section_autosave_entries')
+          .upsert(entries, { onConflict: 'section_key,frame_path,state_key' });
+        if (error) {
+          throw error;
+        }
+        retryCount = 0;
+      }).catch(function(error) {
+        entries.forEach(function(entry) {
+          if (!pendingStates.has(entry.state_key)) {
+            pendingStates.set(entry.state_key, entry.state);
+          }
+        });
+        notifyAutosaveError('Оруулсан мэдээллийг Supabase-д хадгалж чадсангүй. Холболт болон хүснэгтийн тохиргоог шалгана уу.', error);
+        if (retryCount < 2) {
+          const retryDelay = 1000 * (2 ** retryCount);
+          retryCount += 1;
+          saveTimer = setTimeout(flushAutosave, retryDelay);
+        }
+      });
+    }
+
+    function scheduleAutosave() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(flushAutosave, 500);
+    }
 
     function restoreElement(element) {
       if (!shouldAutosaveElement(element) || element.dataset.autosaveRestored === 'true') {
@@ -1495,8 +1587,11 @@
       }
       restoreElement(element);
       const persist = function() {
-        payload[getElementAutosaveKey(element)] = readElementState(element);
-        saveAutosavePayload(storageKey, payload);
+        const key = getElementAutosaveKey(element);
+        const state = readElementState(element);
+        payload[key] = state;
+        pendingStates.set(key, state);
+        scheduleAutosave();
       };
       element.addEventListener('input', persist);
       element.addEventListener('change', persist);
@@ -1525,6 +1620,95 @@
       });
     });
     observer.observe(doc.body, { childList: true, subtree: true });
+  }
+
+  async function initializeSectionAutosave() {
+    const activeSessionId = localStorage.getItem('ubtz_active_session_id');
+    const config = window.SUPABASE_CONFIG;
+    if (!activeSessionId) {
+      window.alert('Идэвхтэй нэвтрэлт олдсонгүй. Эхлээд index.html хуудсаар нэвтэрнэ үү.');
+      window.location.replace('index.html');
+      return;
+    }
+    if (!window.supabase) {
+      throw new Error('Supabase JavaScript сан ачаалсангүй. Интернэт холболт/CDN-г шалгана уу.');
+    }
+    if (!config || !config.url || !config.anonKey ||
+        config.url.includes('YOUR_PROJECT_ID') || config.anonKey.includes('YOUR_SUPABASE_ANON_KEY')) {
+      throw new Error('Supabase URL эсвэл publishable key тохируулаагүй байна.');
+    }
+
+    autosaveSupabaseClient = window.supabase.createClient(config.url, config.anonKey);
+    const { data, error } = await autosaveSupabaseClient
+      .from('section_session_logs')
+      .select('section_key')
+      .eq('id', activeSessionId)
+      .maybeSingle();
+    if (error) {
+      throw error;
+    }
+    if (!data) {
+      localStorage.removeItem('ubtz_active_session_id');
+      window.alert('Энэ нэвтрэлтийн бүртгэл одоогийн Supabase төсөлд олдсонгүй. index.html хуудсаар дахин нэвтэрнэ үү.');
+      window.location.replace('index.html');
+      return;
+    }
+    activeSectionKey = data.section_key;
+    sessionStorage.setItem(SECTION_STORAGE_SESSION_KEY, activeSectionKey);
+
+    const { data: storedEntries, error: storageError } = await autosaveSupabaseClient
+      .from('section_autosave_entries')
+      .select('state_key, state')
+      .eq('section_key', activeSectionKey)
+      .eq('frame_path', SECTION_STORAGE_FRAME_PATH);
+    if (storageError) {
+      throw storageError;
+    }
+
+    storedEntries.forEach(function(entry) {
+      const storageKey = SECTION_STORAGE_PREFIX + activeSectionKey + ':' + entry.state_key;
+      if (entry.state && entry.state.type === 'removed') {
+        localStorage.removeItem(storageKey);
+      } else if (entry.state && entry.state.type === 'value') {
+        localStorage.setItem(storageKey, entry.state.value);
+      }
+    });
+  }
+
+  function handleSectionStorageMessage(event) {
+    const frame = document.getElementById('content-frame');
+    const message = event.data;
+    if (event.origin !== window.location.origin ||
+        !frame || event.source !== frame.contentWindow ||
+        !message || message.type !== 'ubtz:section-storage' ||
+        message.sectionKey !== activeSectionKey ||
+        typeof message.key !== 'string' ||
+        !['set', 'remove'].includes(message.action)) {
+      return;
+    }
+
+    const record = {
+      section_key: activeSectionKey,
+      frame_path: SECTION_STORAGE_FRAME_PATH,
+      state_key: message.key,
+      state: message.action === 'set'
+        ? { type: 'value', value: String(message.value) }
+        : { type: 'removed' },
+      updated_at: new Date().toISOString()
+    };
+
+    sectionStorageWriteQueue = sectionStorageWriteQueue
+      .then(async function() {
+        const { error } = await autosaveSupabaseClient
+          .from('section_autosave_entries')
+          .upsert(record, { onConflict: 'section_key,frame_path,state_key' });
+        if (error) {
+          throw error;
+        }
+      })
+      .catch(function(error) {
+        notifyAutosaveError('Хэсгийн мэдээллийг Supabase-д хадгалж чадсангүй. Хүснэгт болон эрхийн тохиргоог шалгана уу.', error);
+      });
   }
 
   function setupFrameEditMode(doc) {
@@ -1712,8 +1896,11 @@
     doc.head.appendChild(meta);
   }
 
-  function enhanceFrame(frame) {
+  async function enhanceFrame(frame) {
     try {
+      if (frame.src === 'about:blank') {
+        return;
+      }
       const doc = frame.contentDocument;
       if (!doc || !doc.head || !doc.body) {
         return;
@@ -1727,7 +1914,11 @@
       const autosaveMeta = doc.querySelector('meta[name="copilot-frame-autosave"]');
       const autosaveDisabled = autosaveMeta && String(autosaveMeta.getAttribute('content') || '').toLowerCase() === 'off';
       if (!autosaveDisabled) {
-        setupFrameAutosave(doc, getAutosaveStorageKey(frame));
+        try {
+          await setupFrameAutosave(doc, getAutosaveFramePath(frame));
+        } catch (error) {
+          notifyAutosaveError('Хэсгийн мэдээллийг Supabase-ээс ачаалж чадсангүй. Хүснэгтийн тохиргоо болон холболтыг шалгана уу.', error);
+        }
       }
     } catch (error) {
       console.warn('Frame enhancements skipped:', error);
@@ -1774,33 +1965,46 @@
     return './section-placeholder.html#' + encodeURIComponent(fallbackTitle || pageKey);
   }
 
-  function logoutCurrentSession() {
+  async function logoutCurrentSession() {
     if (!window.confirm('Системээс гарах уу?')) {
       return;
     }
 
-    setEditMode(false);
-
-    const historyKey = 'ubtz_session_logs';
     const activeSessionKey = 'ubtz_active_session_id';
     const activeSessionId = localStorage.getItem(activeSessionKey);
     if (activeSessionId) {
-      const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
-      const session = history.find(function(item) {
-        return item.id === activeSessionId && item.status === 'Active';
-      });
-
-      if (session) {
-        const logoutTime = new Date();
-        session.status = 'Completed';
-        session.logoutTime = logoutTime.toISOString();
-        session.logoutFormatted = logoutTime.toLocaleString('mn-MN');
-        session.durationSeconds = Math.floor((logoutTime.getTime() - new Date(session.loginTime).getTime()) / 1000);
-        localStorage.setItem(historyKey, JSON.stringify(history));
+      const config = window.SUPABASE_CONFIG;
+      if (!window.supabase || !config || !config.url || !config.anonKey ||
+          config.url.includes('YOUR_PROJECT_ID') || config.anonKey.includes('YOUR_SUPABASE_ANON_KEY')) {
+        window.alert('Supabase тохируулаагүй байна. supabase-config.js файлыг шалгана уу.');
+        return;
       }
+
+      try {
+        const client = window.supabase.createClient(config.url, config.anonKey);
+        const { data, error } = await client
+          .from('section_session_logs')
+          .update({ status: 'Completed', logout_time: new Date().toISOString() })
+          .eq('id', activeSessionId)
+          .eq('status', 'Active')
+          .select('id')
+          .maybeSingle();
+
+        if (error || !data) {
+          console.error('Supabase logout update failed:', error);
+          window.alert(error ? 'Нэвтрэлтийн түүхийг Supabase-д шинэчилж чадсангүй.' : 'Идэвхтэй нэвтрэлтийн бүртгэл олдсонгүй.');
+          return;
+        }
+      } catch (error) {
+        console.error('Supabase logout request failed:', error);
+        window.alert('Supabase-тай холбогдож чадсангүй. Интернэт холболтоо шалгана уу.');
+        return;
+      }
+
       localStorage.removeItem(activeSessionKey);
     }
 
+    setEditMode(false);
     window.location.href = 'index.html';
   }
 
@@ -1847,6 +2051,22 @@
   }
 
   document.addEventListener('DOMContentLoaded', async function() {
+    const logoutLink = document.getElementById('logout-link');
+    if (logoutLink) {
+      logoutLink.addEventListener('click', function(event) {
+        event.preventDefault();
+        logoutCurrentSession();
+      });
+    }
+
+    try {
+      await initializeSectionAutosave();
+    } catch (error) {
+      notifyAutosaveError('Хэсгийн нэвтрэлт эсвэл Supabase-ийн хэсэгчилсэн хадгалалтыг эхлүүлж чадсангүй. Хүснэгт болон эрхийн тохиргоог шалгана уу.', error);
+    }
+    if (!activeSectionKey) {
+      return;
+    }
     await loadPageMap();
     syncEditModeUi();
 
@@ -1855,14 +2075,6 @@
     const sidebarOverlay = document.getElementById('sidebar-overlay');
     const modeToggle = document.getElementById('mode-toggle');
     const videoClose = document.getElementById('video-close');
-    const logoutLink = document.getElementById('logout-link');
-
-    if (logoutLink) {
-      logoutLink.addEventListener('click', function(event) {
-        event.preventDefault();
-        logoutCurrentSession();
-      });
-    }
 
     if (videoClose) {
       videoClose.addEventListener('click', function() {
@@ -1877,10 +2089,11 @@
       frame.addEventListener('load', function() {
         enhanceFrame(frame);
       });
-      if (frame.contentDocument && frame.contentDocument.readyState === 'complete') {
+      if (frame.src !== 'about:blank' && frame.contentDocument && frame.contentDocument.readyState === 'complete') {
         enhanceFrame(frame);
       }
     }
+    window.addEventListener('message', handleSectionStorageMessage);
 
     if (modeToggle) {
       modeToggle.addEventListener('click', function() {
@@ -1950,7 +2163,7 @@
     } else {
       const defaultSidebarLink = document.getElementById('heseg-link');
       if (defaultSidebarLink) {
-        setActiveSidebarLink(defaultSidebarLink);
+        loadFramePage(defaultSidebarLink.dataset.pageKey, defaultSidebarLink);
       }
     }
   });

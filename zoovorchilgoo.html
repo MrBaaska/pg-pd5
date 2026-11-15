@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="mn">
 <head>
+    <script src="section-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ажлын заавар хуудас</title>
@@ -729,7 +730,8 @@
             color: #fff;
         }
 
-        .footer-section select {
+        .footer-section select,
+        .footer-section input {
             width: 100%;
             padding: 12px 15px;
             border: 2px solid rgba(255,255,255,0.3);
@@ -740,7 +742,8 @@
             transition: all 0.3s ease;
         }
 
-        .footer-section select:focus {
+        .footer-section select:focus,
+        .footer-section input:focus {
             outline: none;
             border-color: #667eea;
             transform: scale(1.02);
@@ -1103,6 +1106,10 @@
                 <div class="worker-form">
                     <input type="text" id="job" placeholder="Технологийн карт № ..., хорио хамгаалалт">
                     <div class="name-selector">
+                        <div class="name-selector-head">
+                            <input type="text" id="nameSearch" placeholder="Ажилтны нэр нэмэх эсвэл хайх">
+                            <button type="button" id="addNameOption">+ Нэр нэмэх</button>
+                        </div>
                         <div class="name-selector-meta">
                             <span>Товшиж сонгох</span>
                             <span id="nameSelectionSummary" class="name-selector-summary">0 сонгогдсон</span>
@@ -1124,16 +1131,9 @@
 
             <div class="footer-section batlav">
                 <label style="color: #000; text-align: center; font-size: 1.4em; font-weight: 900;">Боловсруулсан:</label>
-                <select id="preparedBy" data-allow-view-edit="1">
-                    <option value="ПДБ О.Батбаяр">ПДБ О.Батбаяр</option>
-                    <option value="ПДБ Т.Жаяъяндагва">ПДБ Т.Жаяъяндагва</option>
-                    <option value="ПДБ Ц.Эрдэнэбаяр">ПДБ Ц.Эрдэнэбаяр</option>
-                </select>
+                <input type="text" id="preparedBy" value="ПДБ О.Батбаяр" data-allow-view-edit="1">
                 <label>Хянасан:</label>
-                <select id="reviewedBy" data-allow-view-edit="1">
-                    <option value="ПД Б.Энхсайхан">ПД Б.Энхсайхан</option>
-                    <option value="ПДБ Т.Энхжаргал">ПДБ Т.Энхжаргал</option>
-                </select>
+                <input type="text" id="reviewedBy" value="ПД Б.Энхсайхан" data-allow-view-edit="1">
                 <button type="button" class="save-btn" id="saveDataBtn" data-allow-view-edit="1">💾 Хадгалах</button>
             </div>
         </div>
@@ -1176,7 +1176,11 @@
             const WORKER_DRAFT_KEY = "ubtz_worker_draft_v1";
             const RECORDS_DB_NAME = "ubtz_instruction_records_db";
             const RECORDS_STORE_NAME = "app_storage";
-            const RECORDS_PRIMARY_KEY = "saved_records";
+            const ACTIVE_SECTION_KEY = window.sessionStorage.getItem("ubtz:active-section-key");
+            // IndexedDB is shared across same-origin sections, so records need their own key.
+            const RECORDS_PRIMARY_KEY = ACTIVE_SECTION_KEY
+                ? `saved_records:${encodeURIComponent(ACTIVE_SECTION_KEY)}`
+                : "saved_records";
             const DEFAULT_EMPLOYEE_NAMES = [
                 "пр-5 М.Нямжав",
                 "пр-4 С.Батмөнх",
@@ -1214,7 +1218,7 @@
         }
 
         function isAllowedEmployeeName(name) {
-            return DEFAULT_EMPLOYEE_NAME_SET.has(normalizeName(name));
+            return employeeNames.includes(normalizeName(name));
         }
 
         function persistEmployeeNames() {
@@ -1303,7 +1307,13 @@
                         : "";
 
             const listItem = document.createElement("li");
-            listItem.innerHTML = `<span><span class="worker-name">${name}</span>${workerMetaLabel}</span>`;
+            const workerText = document.createElement("span");
+            const workerName = document.createElement("span");
+            workerName.className = "worker-name";
+            workerName.textContent = name;
+            workerText.appendChild(workerName);
+            workerText.appendChild(document.createTextNode(workerMetaLabel));
+            listItem.appendChild(workerText);
             listItem.dataset.name = name;
             listItem.dataset.job = job;
             listItem.dataset.rank = rank;
@@ -1347,7 +1357,7 @@
                 if (Array.isArray(parsed?.workers) && parsed.workers.length > 0) {
                     parsed.workers.forEach((worker) => {
                         const name = normalizeName(worker?.name);
-                        if (!name || !isAllowedEmployeeName(name)) {
+                        if (!name) {
                             return;
                         }
                         const job = (worker?.job || "").trim();
@@ -1358,16 +1368,6 @@
 
                 if (recentSelectionPanel) {
                     recentSelectionPanel.innerHTML = parsed?.recentSelectionHtml || "";
-                    Array.from(recentSelectionPanel.querySelectorAll(".recent-selection-item")).forEach((item) => {
-                        if (!isAllowedEmployeeName(item.textContent || "")) {
-                            item.remove();
-                        }
-                    });
-                    Array.from(recentSelectionPanel.querySelectorAll(".recent-selection-entry")).forEach((entry) => {
-                        if (entry.querySelectorAll(".recent-selection-item").length === 0) {
-                            entry.remove();
-                        }
-                    });
                     recentSelectionPanel.style.display = parsed?.recentSelectionVisible && recentSelectionPanel.querySelectorAll(".recent-selection-entry").length > 0
                         ? "block"
                         : "none";
@@ -1380,19 +1380,24 @@
 
         function loadEmployeeNames() {
             try {
-                employeeNames = [...DEFAULT_EMPLOYEE_NAME_SET].sort((left, right) => left.localeCompare(right, "mn"));
-                persistEmployeeNames();
+                const raw = localStorage.getItem(NAME_DIRECTORY_KEY);
+                if (raw === null) {
+                    employeeNames = [...DEFAULT_EMPLOYEE_NAME_SET].sort((left, right) => left.localeCompare(right, "mn"));
+                    persistEmployeeNames();
+                    return;
+                }
+
+                const storedNames = JSON.parse(raw);
+                if (!Array.isArray(storedNames)) {
+                    throw new Error("Stored employee names must be an array");
+                }
+                employeeNames = [...new Set(storedNames.map(normalizeName).filter(Boolean))]
+                    .sort((left, right) => left.localeCompare(right, "mn"));
             } catch (error) {
                 console.error("Employee names load error:", error);
                 employeeNames = [...DEFAULT_EMPLOYEE_NAME_SET].sort((left, right) => left.localeCompare(right, "mn"));
                 persistEmployeeNames();
             }
-        }
-
-        function setEmployeeNames(nextNames) {
-            employeeNames = [...DEFAULT_EMPLOYEE_NAME_SET].sort((left, right) => left.localeCompare(right, "mn"));
-            persistEmployeeNames();
-            renderNameOptions();
         }
 
         function addEmployeeName(name) {
@@ -1401,11 +1406,14 @@
                 return false;
             }
 
-            if (!isAllowedEmployeeName(normalized)) {
-                alert(`\"${normalized}\" нэр жагсаалтад байхгүй тул нэмэгдэхгүй.`);
+            if (isAllowedEmployeeName(normalized)) {
+                alert(`"${normalized}" нэр жагсаалтад аль хэдийн байна.`);
                 return false;
             }
 
+            employeeNames.push(normalized);
+            employeeNames.sort((left, right) => left.localeCompare(right, "mn"));
+            persistEmployeeNames();
             selectedNames.add(normalized);
             renderNameOptions();
             saveWorkerDraft();
@@ -1413,11 +1421,45 @@
         }
 
         function editEmployeeName(oldName) {
-            alert("Нэр засах боломж хаалттай.");
+            const enteredName = prompt("Ажилтны шинэ нэрийг оруулна уу:", oldName);
+            if (enteredName === null) {
+                return;
+            }
+
+            const newName = normalizeName(enteredName);
+            if (!newName) {
+                alert("Ажилтны нэр хоосон байж болохгүй.");
+                return;
+            }
+            if (newName !== oldName && isAllowedEmployeeName(newName)) {
+                alert(`"${newName}" нэр жагсаалтад аль хэдийн байна.`);
+                return;
+            }
+
+            const nameIndex = employeeNames.indexOf(oldName);
+            if (nameIndex === -1) {
+                return;
+            }
+            employeeNames[nameIndex] = newName;
+            employeeNames.sort((left, right) => left.localeCompare(right, "mn"));
+            if (selectedNames.delete(oldName)) {
+                selectedNames.add(newName);
+            }
+            persistEmployeeNames();
+            renderNameOptions();
+            saveWorkerDraft();
         }
 
         function deleteEmployeeName(name) {
-            alert("Нэр устгах боломж хаалттай.");
+            if (!confirm(`"${name}" нэрийг ажилтны жагсаалтаас устгах уу?`)) {
+                return;
+            }
+
+            employeeNames = employeeNames.filter((employeeName) => employeeName !== name);
+            selectedNames.delete(name);
+            persistEmployeeNames();
+            renderNameOptions();
+            saveWorkerDraft();
         }
 
         function getKnownNames() {
@@ -1450,8 +1492,8 @@
             if (knownNames.length === 0) {
                 const emptyState = document.createElement("div");
                 emptyState.className = "name-options-empty";
-                emptyState.innerHTML = query
-                    ? `<strong>${nameSearchInput.value}</strong> нэр олдсонгүй`
+                emptyState.textContent = query
+                    ? `"${nameSearchInput.value}" нэр олдсонгүй`
                     : "Одоогоор сонгох нэрийн жагсаалт хоосон байна.";
                 nameOptions.appendChild(emptyState);
                 updateNameSelectionSummary();
@@ -1460,13 +1502,11 @@
 
             knownNames.forEach((name, index) => {
                 const optionId = `name-option-${index}`;
-                const label = document.createElement("label");
-                label.className = "name-option";
+                const option = document.createElement("div");
+                option.className = "name-option";
                 if (selectedNames.has(name)) {
-                    label.classList.add("is-selected");
+                    option.classList.add("is-selected");
                 }
-
-                label.setAttribute("for", optionId);
 
                 const checkbox = document.createElement("input");
                 checkbox.type = "checkbox";
@@ -1477,26 +1517,49 @@
                 checkbox.addEventListener("change", function () {
                     if (checkbox.checked) {
                         selectedNames.add(name);
-                        label.classList.add("is-selected");
+                        option.classList.add("is-selected");
                     } else {
                         selectedNames.delete(name);
-                        label.classList.remove("is-selected");
+                        option.classList.remove("is-selected");
                     }
                     updateNameSelectionSummary();
                     saveWorkerDraft();
                 });
 
+                const label = document.createElement("label");
+                label.htmlFor = optionId;
+                label.className = "name-option-text";
+                label.textContent = name;
+
                 const body = document.createElement("span");
                 body.className = "name-option-body";
+                body.appendChild(label);
 
-                const text = document.createElement("span");
-                text.className = "name-option-text";
-                text.textContent = name;
-                body.appendChild(text);
+                const actions = document.createElement("span");
+                actions.className = "name-option-actions";
+                const editButton = document.createElement("button");
+                editButton.type = "button";
+                editButton.className = "name-option-action edit";
+                editButton.textContent = "✎";
+                editButton.title = `${name} нэрийг засах`;
+                editButton.setAttribute("aria-label", `${name} нэрийг засах`);
+                editButton.addEventListener("click", () => editEmployeeName(name));
 
-                label.appendChild(checkbox);
-                label.appendChild(body);
-                nameOptions.appendChild(label);
+                const deleteButton = document.createElement("button");
+                deleteButton.type = "button";
+                deleteButton.className = "name-option-action delete";
+                deleteButton.textContent = "×";
+                deleteButton.title = `${name} нэрийг устгах`;
+                deleteButton.setAttribute("aria-label", `${name} нэрийг устгах`);
+                deleteButton.addEventListener("click", () => deleteEmployeeName(name));
+
+                actions.appendChild(editButton);
+                actions.appendChild(deleteButton);
+                body.appendChild(actions);
+
+                option.appendChild(checkbox);
+                option.appendChild(body);
+                nameOptions.appendChild(option);
             });
 
             updateNameSelectionSummary();
@@ -1508,7 +1571,15 @@
                 return;
             }
 
-            const isSelected = addEmployeeName(newName);
+            let isSelected;
+            if (isAllowedEmployeeName(newName)) {
+                selectedNames.add(newName);
+                renderNameOptions();
+                saveWorkerDraft();
+                isSelected = true;
+            } else {
+                isSelected = addEmployeeName(newName);
+            }
             if (isSelected && nameSearchInput) {
                 nameSearchInput.value = "";
             }
@@ -1549,11 +1620,22 @@
 
             const jobText = job ? job : "Ажлын нэр оруулаагүй";
             const rankText = rank ? ` (${rank}-р зэрэг)` : "";
-            const title = `<div class="recent-selection-title">Сүүлд сонгож нэмсэн хүмүүс: ${jobText}${rankText}</div>`;
-            const list = `<div class="recent-selection-list">${names.map((name) => `<div class="recent-selection-item">${name}</div>`).join("")}</div>`;
-            const entry = `<div class="recent-selection-entry">${title}${list}</div>`;
-
-            recentSelectionPanel.insertAdjacentHTML("beforeend", entry);
+            const entry = document.createElement("div");
+            entry.className = "recent-selection-entry";
+            const title = document.createElement("div");
+            title.className = "recent-selection-title";
+            title.textContent = `Сүүлд сонгож нэмсэн хүмүүс: ${jobText}${rankText}`;
+            const list = document.createElement("div");
+            list.className = "recent-selection-list";
+            names.forEach((name) => {
+                const item = document.createElement("div");
+                item.className = "recent-selection-item";
+                item.textContent = name;
+                list.appendChild(item);
+            });
+            entry.appendChild(title);
+            entry.appendChild(list);
+            recentSelectionPanel.appendChild(entry);
             recentSelectionPanel.style.display = "block";
             saveWorkerDraft();
         }
@@ -1671,35 +1753,74 @@
             }
         }
 
-        function getRecordDayKey(record) {
-            const source = record.workDate || record.timestamp;
+        const ULAANBAATAR_TIME_ZONE = "Asia/Ulaanbaatar";
+
+        function hasLegacyUtcWorkDate(record) {
+            return typeof record.workDate === "string"
+                && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(record.workDate)
+                && typeof record.timestamp === "string"
+                && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(record.timestamp)
+                && record.workDate === record.timestamp.slice(0, 16);
+        }
+
+        function parseRecordDate(record) {
+            const isLegacyUtcDate = hasLegacyUtcWorkDate(record);
+            const source = isLegacyUtcDate ? record.timestamp : (record.workDate || record.timestamp);
             if (!source) {
+                return null;
+            }
+            const isLocalWorkDate = !isLegacyUtcDate
+                && record.workDate
+                && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(record.workDate);
+            const dateObj = new Date(isLocalWorkDate ? `${record.workDate}+08:00` : source);
+            return Number.isNaN(dateObj.getTime()) ? null : dateObj;
+        }
+
+        function getUlaanbaatarDateTimeLocal(dateObj = new Date()) {
+            const parts = new Intl.DateTimeFormat("en-CA", {
+                timeZone: ULAANBAATAR_TIME_ZONE,
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                hourCycle: "h23"
+            }).formatToParts(dateObj);
+            const part = (type) => parts.find((item) => item.type === type).value;
+            return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
+        }
+
+        function getRecordDayKey(record) {
+            if (!hasLegacyUtcWorkDate(record) && record.workDate && /^\d{4}-\d{2}-\d{2}T/.test(record.workDate)) {
+                return record.workDate.slice(0, 10);
+            }
+            const dateObj = parseRecordDate(record);
+            if (!dateObj) {
                 return "Огноо тодорхойгүй";
             }
-            const dateObj = new Date(source);
-            if (Number.isNaN(dateObj.getTime())) {
-                return "Огноо тодорхойгүй";
-            }
-            const yyyy = dateObj.getFullYear();
-            const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
-            const dd = String(dateObj.getDate()).padStart(2, "0");
-            return `${yyyy}-${mm}-${dd}`;
+            const parts = new Intl.DateTimeFormat("en-CA", {
+                timeZone: ULAANBAATAR_TIME_ZONE,
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit"
+            }).formatToParts(dateObj);
+            const part = (type) => parts.find((item) => item.type === type).value;
+            return `${part("year")}-${part("month")}-${part("day")}`;
         }
 
         function toDateLabel(dayKey) {
             if (dayKey === "Огноо тодорхойгүй") {
                 return dayKey;
             }
-            return new Date(`${dayKey}T00:00:00`).toLocaleDateString("mn-MN", {
+            return new Date(`${dayKey}T00:00:00Z`).toLocaleDateString("mn-MN", {
+                timeZone: "UTC",
                 year: "numeric",
                 month: "long",
                 day: "numeric"
             });
         }
 
-        const now = new Date();
-        const dateTimeString = now.toISOString().slice(0, 16);
-        document.getElementById('workDate').value = dateTimeString;
+        document.getElementById('workDate').value = getUlaanbaatarDateTimeLocal();
         updateWorkTypeWidth();
         syncWorkerSectionHeight();
 
@@ -1973,8 +2094,8 @@
 
             const groupedRecords = {};
             const sortedRecords = [...savedRecords].sort((a, b) => {
-                const timeA = new Date(a.workDate || a.timestamp || 0).getTime();
-                const timeB = new Date(b.workDate || b.timestamp || 0).getTime();
+                const timeA = parseRecordDate(a)?.getTime() ?? 0;
+                const timeB = parseRecordDate(b)?.getTime() ?? 0;
                 return timeB - timeA;
             });
 
@@ -2009,10 +2130,10 @@
                 const card = document.createElement('div');
                 card.className = 'record-card';
 
-                const recordDate = new Date(record.workDate || record.timestamp);
-                const formatDate = Number.isNaN(recordDate.getTime())
+                const recordDate = parseRecordDate(record);
+                const formatDate = !recordDate
                     ? 'Огноо тодорхойгүй'
-                    : recordDate.toLocaleString('mn-MN');
+                    : recordDate.toLocaleString('mn-MN', { timeZone: ULAANBAATAR_TIME_ZONE });
                 
                 card.innerHTML = `
                     <div class="record-header" style="justify-content: flex-start;">
@@ -2074,8 +2195,7 @@
         }
 
         function resetForm() {
-            const now = new Date();
-            document.getElementById('workDate').value = now.toISOString().slice(0, 16);
+            document.getElementById('workDate').value = getUlaanbaatarDateTimeLocal();
             document.getElementById('distance1').value = '';
             document.getElementById('meter1').value = '';
             document.getElementById('distance2').value = '';
