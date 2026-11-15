@@ -161,8 +161,10 @@
             font-weight: bold;
         }
 
-        .header-form input[type="datetime-local"] {
-            min-width: min(220px, 100%);
+        #workDateDisplay {
+            min-width: min(240px, 100%);
+            cursor: default;
+            text-align: center;
         }
 
         .header-form select {
@@ -959,7 +961,7 @@
             .header-form span { font-size: 11px; padding: 5px 8px; }
             .header-form input, .header-form select { font-size: 11px; padding: 5px 8px; }
             .header-form input[type="number"] { width: 70px; }
-            .header-form input[type="datetime-local"] { min-width: 160px; }
+            #workDateDisplay { min-width: 190px; }
             .header-form select { min-width: 140px; max-width: 100%; }
             .work-type-sizer { font-size: 11px; padding: 5px 8px; }
             #workType { min-width: 0; }
@@ -982,15 +984,36 @@
         <div class="header">
             <h1 style="text-align:center; color: #000; width:100%; font-size:1.4em;">Ажлын газрын байршил</h1>
             <div class="header-form">
-                <input type="datetime-local" id="workDate">
+                <input type="text" id="workDateDisplay" readonly aria-label="Улаанбаатар хотын одоогийн огноо, цаг" title="Улаанбаатар хотын цаг">
+                <input type="hidden" id="workDate">
                 <span>ӨДӨР</span>
                 <select id="location1">
-                     <option value="ШАТАН">ШАТАН</option>
+                    <option value="ШАТАН">ШАТАН</option>
                     <option value="МАНДАЛ">МАНДАЛ</option>
                     <option value="НОГООНТОЛГОЙ">НОГООНТОЛГОЙ</option>
                     <option value="РАШААНТ">РАШААНТ</option>
                     <option value="ДАВААНЫ">ДАВААНЫ</option>
                     <option value="ЭМЭЭЛТ">ЭМЭЭЛТ</option>
+                        <option value="ТОЛГОЙТ">ТОЛГОЙТ</option>
+                        <option value="СОНГИНО">СОНГИНО</option>
+                        <option value="СОНСГОЛОН">СОНСГОЛОН</option>
+                        <option value="УЛААНБААТАР-2">УЛААНБААТАР-2</option>
+                        <option value="УЛААНБААТАР-1">УЛААНБААТАР-1</option>
+                        <option value="АМГАЛАН">АМГАЛАН</option>
+                        <option value="ТУУЛ">ТУУЛ</option>
+                        <option value="ХОНХОР">ХОНХОР</option>
+                        <option value="БУМБАТ">БУМБАТ</option>
+                        <option value="БАЯН">БАЯН</option>
+                        <option value="ХАЙРХАН">ХАЙРХАН</option>
+                        <option value="ХООЛТ">ХООЛТ</option>
+                        <option value="ЦАГААН ХЯР">ЦАГААН ХЯР</option>
+                        <option value="ЧУЛУУТ">ЧУЛУУТ</option>
+                        <option value="ХАНГАЙ">ХАНГАЙ</option>
+                        <option value="БАГАХАНГАЙ">БАГАХАНГАЙ</option>
+                        <option value="МААНЬТ">МААНЬТ</option>
+                        <option value="АГУЙТ">АГУЙТ</option>
+                        <option value="БУЛАГТАЙ">БУЛАГТАЙ</option>
+                        <option value="БАГАНУУР">БАГАНУУР</option>
                 </select>
                 <span>ӨРТӨӨ/ЗӨРЛӨГ-С</span>
                 <select id="location2">
@@ -1000,6 +1023,26 @@
                     <option value="РАШААНТ">РАШААНТ</option>
                     <option value="ДАВААНЫ">ДАВААНЫ</option>
                     <option value="ЭМЭЭЛТ">ЭМЭЭЛТ</option>
+                        <option value="ТОЛГОЙТ">ТОЛГОЙТ</option>
+                        <option value="СОНГИНО">СОНГИНО</option>
+                        <option value="СОНСГОЛОН">СОНСГОЛОН</option>
+                        <option value="УЛААНБААТАР-2">УЛААНБААТАР-2</option>
+                        <option value="УЛААНБААТАР-1">УЛААНБААТАР-1</option>
+                        <option value="АМГАЛАН">АМГАЛАН</option>
+                        <option value="ТУУЛ">ТУУЛ</option>
+                        <option value="ХОНХОР">ХОНХОР</option>
+                        <option value="БУМБАТ">БУМБАТ</option>
+                        <option value="БАЯН">БАЯН</option>
+                        <option value="ХАЙРХАН">ХАЙРХАН</option>
+                        <option value="ХООЛТ">ХООЛТ</option>
+                        <option value="ЦАГААН ХЯР">ЦАГААН ХЯР</option>
+                        <option value="ЧУЛУУТ">ЧУЛУУТ</option>
+                        <option value="ХАНГАЙ">ХАНГАЙ</option>
+                        <option value="БАГАХАНГАЙ">БАГАХАНГАЙ</option>
+                        <option value="МААНЬТ">МААНЬТ</option>
+                        <option value="АГУЙТ">АГУЙТ</option>
+                        <option value="БУЛАГТАЙ">БУЛАГТАЙ</option>
+                        <option value="БАГАНУУР">БАГАНУУР</option>
                 </select>
                 <span>ХООРОНДЫН ЗАМЫН</span>
                 <input type="number" id="distance1" placeholder="0">
@@ -1784,10 +1827,17 @@
                 day: "2-digit",
                 hour: "2-digit",
                 minute: "2-digit",
+                second: "2-digit",
                 hourCycle: "h23"
             }).formatToParts(dateObj);
             const part = (type) => parts.find((item) => item.type === type).value;
-            return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
+            return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}:${part("second")}`;
+        }
+
+        function updateWorkDateDisplay() {
+            const workDate = getUlaanbaatarDateTimeLocal();
+            document.getElementById("workDate").value = workDate;
+            document.getElementById("workDateDisplay").value = workDate.replace("T", " (").replace(/-/g, ".") + ")";
         }
 
         function getRecordDayKey(record) {
@@ -1820,7 +1870,8 @@
             });
         }
 
-        document.getElementById('workDate').value = getUlaanbaatarDateTimeLocal();
+        updateWorkDateDisplay();
+        setInterval(updateWorkDateDisplay, 1000);
         updateWorkTypeWidth();
         syncWorkerSectionHeight();
 
@@ -2195,7 +2246,7 @@
         }
 
         function resetForm() {
-            document.getElementById('workDate').value = getUlaanbaatarDateTimeLocal();
+            updateWorkDateDisplay();
             document.getElementById('distance1').value = '';
             document.getElementById('meter1').value = '';
             document.getElementById('distance2').value = '';

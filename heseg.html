@@ -582,14 +582,11 @@ body {
       <p>Онцлох ажлын мэдээллийн архив</p>
     </div>
     <div class="header-actions" style="display:flex;gap:10px;align-items:center">
-      <button class="btn btn-ghost" id="btnSave" onclick="autosave(true);toast('Хадгалагдлаа ✓','success')" style="display:none">
+      <button class="btn btn-ghost" id="btnSave" onclick="autosave(true);toast('Хадгалагдлаа ✓','success')">
         <i class="fa-solid fa-floppy-disk"></i> Хадгалах
       </button>
-      <button class="btn btn-primary" id="btnAddYear" onclick="openAddYearModal()" style="display:none">
+      <button class="btn btn-primary" id="btnAddYear" onclick="openAddYearModal()">
         <i class="fa-solid fa-plus"></i> Жил нэмэх
-      </button>
-      <button class="btn btn-ghost" id="btnLogin" onclick="openLoginModal()">
-        <i class="fa-solid fa-lock"></i> Нэвтрэх
       </button>
     </div>
   </div>
@@ -636,19 +633,6 @@ body {
   </div>
 </div>
 
-<!-- LOGIN MODAL -->
-<div class="modal-overlay" id="loginModal" onclick="closeLoginModal(event)">
-  <button class="modal-close" onclick="closeLoginModal()">&times;</button>
-  <div class="modal-box" style="padding:28px;max-width:360px;background:#fff;color:var(--ink)">
-    <h3 style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--steel);margin-bottom:20px">Засварлах эрхээр нэвтрэх</h3>
-    <input type="password" id="loginCodeInput" placeholder="Нэвтрэх код" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.95rem;margin-bottom:16px" onkeydown="if(event.key==='Enter')submitLogin()">
-    <div style="display:flex;gap:10px;justify-content:flex-end">
-      <button class="btn btn-ghost" style="color:var(--ink);border-color:var(--border);background:#f1f5f9" onclick="closeLoginModal()">Болих</button>
-      <button class="btn btn-primary" onclick="submitLogin()">Нэвтрэх</button>
-    </div>
-  </div>
-</div>
-
 <div id="toast"></div>
 
 <div id="autosave-bar">
@@ -658,55 +642,14 @@ body {
 
 <script>
 // ══════════════════════════════════════════════════════
-// EDIT-MODE / LOGIN
+// EDIT MODE
 // ══════════════════════════════════════════════════════
-const EDIT_CODE = '89669234';
-const EDIT_SESSION_KEY = 'railway_archive_edit';
-let editMode = sessionStorage.getItem(EDIT_SESSION_KEY) === '1';
+const editMode = true;
 
 function esc(str) {
   return String(str == null ? '' : str)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-function openLoginModal() {
-  if (editMode) { logout(); return; }
-  document.getElementById('loginModal').classList.add('open');
-  setTimeout(() => document.getElementById('loginCodeInput').focus(), 50);
-}
-function closeLoginModal(e) {
-  if (e && e.type === 'click' && e.target !== document.getElementById('loginModal') && !e.target.classList.contains('modal-close')) return;
-  document.getElementById('loginModal').classList.remove('open');
-  document.getElementById('loginCodeInput').value = '';
-}
-function submitLogin() {
-  const val = document.getElementById('loginCodeInput').value.trim();
-  if (val === EDIT_CODE) {
-    editMode = true;
-    sessionStorage.setItem(EDIT_SESSION_KEY, '1');
-    closeLoginModal();
-    applyEditModeUI();
-    render();
-    toast('Засварлах горим нээгдлээ ✓', 'success');
-  } else {
-    toast('Нэвтрэх код буруу байна', 'error');
-  }
-}
-function logout() {
-  editMode = false;
-  sessionStorage.removeItem(EDIT_SESSION_KEY);
-  applyEditModeUI();
-  render();
-  toast('Гарлаа', 'success');
-}
-function applyEditModeUI() {
-  document.getElementById('btnSave').style.display = editMode ? 'inline-flex' : 'none';
-  document.getElementById('btnAddYear').style.display = editMode ? 'inline-flex' : 'none';
-  const lb = document.getElementById('btnLogin');
-  lb.innerHTML = editMode
-    ? '<i class="fa-solid fa-lock-open"></i> Гарах'
-    : '<i class="fa-solid fa-lock"></i> Нэвтрэх';
 }
 
 // ══════════════════════════════════════════════════════
@@ -1483,7 +1426,6 @@ function toast(msg, type = 'success') {
 
 // ── INIT ──
 loadSaved();
-applyEditModeUI();
 render();
 </script>
 </body>
